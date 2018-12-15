@@ -187,7 +187,7 @@ Hopefully, regardless of what method you use, you should see "Hello, World!" pri
 
 This short tutorial is based around exploring data from the School of GeoSciences weather station, which is located on top of the James Clark Maxwell Building at the University of Edinburgh.
 
-You can download the data, and some helpful Python cheatsheets from <a href="https://github.com/ourcodingclub/CC-python-intro" target="_blank">this github repository</a>. Clone and download the repo as a zipfile by pressing the big green button, then unzip it. You should then save any python scripts to that folder, so they can access the data easily.
+## You can download the data, and some helpful Python cheatsheets from <a href="https://github.com/ourcodingclub/CC-python-intro" target="_blank">this github repository</a>. Clone and download the repo as a zipfile by pressing the big green button, then unzip it. You should then save any python scripts to that folder, so they can access the data easily.
 
 Alternatively, you can fork <a href="https://github.com/ourcodingclub/CC-python-intro" target="_blank">the repository</a> to your own Github account and then clone it using the HTTPS/SSH link. For more details on how to register on Github, download Git and use version control, please check out our <a href="https://ourcodingclub.github.io/2017/02/27/git.html" target="_blank">previous tutorial.</a>
 
@@ -528,7 +528,7 @@ The `plot` function will plot a line chart by default, and the first argument is
 
 Open the "pressure.png" file (it will be in the same folder) and you should see a simple line plot of the pressure data over the 2 days that Storm Eleanor passed over Edinburgh. It should look something like this:
 
-<center> <img src="{{ site.baseurl }}/img/pressure.png" alt="Img" style="width: 800px;"/> </center>
+<center> <img src="{{ site.baseurl }}/img/pressure.png" alt="Img" style="width: 500px;"/> </center>
 
 We can see how the pressure drops significantly as the storm passes over the weather station. However, the plot could be improved with some lables on the axes, and a title. To add them to the figure, change our script to include the following:
 
@@ -617,7 +617,7 @@ Make sure the script is saved, and then run it. Open up the "pressure_final.png"
 
 The final figure should look like this:
 
-<center> <img src="{{ site.baseurl }}/img/pressure_final.png" alt="Img" style="width: 800px;"/> </center>
+<center> <img src="{{ site.baseurl }}/img/pressure_final.png" alt="Img" style="width: 500px;"/> </center>
 
 ## Summary
 
@@ -643,7 +643,7 @@ In this tutorial we have looked at why Python is popular for scientific programm
 
 __Check out <a href="https://ourcodingclub.github.io/workshop/" target="_blank">this page</a> to learn how you can get involved! We are very happy to have people use our tutorials and adapt them to their needs. We are also very keen to expand the content on the website, so feel free to get in touch if you'd like to write a tutorial!__
 
-This work is licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/). <a href="https://creativecommons.org/licenses/by-sa/4.0/"><img src="https://licensebuttons.net/l/by-sa/4.0/80x15.png" alt="Img" style="width: 100px;"/></a>
+<a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/80x15.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.
 
 <h3><a href="https://www.surveymonkey.co.uk/r/WVL5GXB" target="_blank">&nbsp; We would love to hear your feedback, please fill out our survey!</a></h3>
 <br>

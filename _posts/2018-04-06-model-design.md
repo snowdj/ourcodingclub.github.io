@@ -22,7 +22,9 @@ tags: modelling data_manip data_vis
 #### <a href="#types"> 5. Turn a question in to a model </a>
 #### <a href="#models"> 6. Learn about the different types of models </a>
 #### <a href="#linear"> 7. General linear models </a>
-#### <a href="#lme4"> 7. Hierarchical models using `lme4` </a>
+#### <a href="#lme4"> 8. Hierarchical models using `lme4` </a>
+#### <a href="#lme4b"> 9. Random slopes versus random intercepts `lme4` </a>
+#### <a href="#MCMCglmm"> 10. Hierarchical models using `MCMCglmm` </a>
 
 ### All the files you need to complete this tutorial can be downloaded from <a href="https://github.com/ourcodingclub/CC-model-design" target="_blank">this repository</a>. Click on `Clone/Download/Download ZIP` and unzip the folder, or clone the repository to your own GitHub account.
 
@@ -86,6 +88,7 @@ library(dplyr)  # for data manipulation
 library(ggplot2)  # for data visualisation
 library(lme4)  # for models
 library(sjPlot)  # to visualise model outputs
+library(ggeffects)  # to visualise model predictions
 library(MCMCglmm)  # for models
 library(MCMCvis)  # to visualise model outputs
 library(brms)  # for models
@@ -253,7 +256,7 @@ What is our dependent and independent variable here?  We could write out our bas
 
 __Richness is a function of time.__
 
-__In R this turns into the code: `richness ~ time`.__
+__In `R` this turns into the code: `richness ~ time`.__
 
 __Richness is our dependent (predictor) variable and time is our independent variable <a href="https://en.wikipedia.org/wiki/Dependent_and_independent_variables" target="_blank"> see here for more details</a>). This is our base model. But what other things do we need to account for? What would happen if we just modelled richness as a function of time without dealing with the other structure in our data?  Let's find out in the rest of the tutorial.__
 
@@ -314,12 +317,15 @@ __For now let's check the residual versus predicted plot for our linear model. B
 plot(plant_m)
 ```
 
+<a name="lme4"></a>
 
 ## 8. Hierarchical models using `lme4`
 
 Now that we have explored the idea of a hierarchical model, let's see how our analysis changes if we do or do not incorporate elements of the experimental design to the hierarchy of our model.
 
-First let's model with only site as a random effect.  This model does not incorporate the temporal replication in the data or the fact that there are plots within blocks within those sites:
+First let's model with only site as a random effect.  This model does not incorporate the temporal replication in the data or the fact that there are plots within blocks within those sites. 
+
+Notice how we have transformed the `Year` column - `I(Year - 2007)` means that the year `2008` will become `Year 1` - then your model is estimating richness across the first, second, etc., year from your survey period. Otherwise, if we had kept the years just as `2008`, `2009`,..., the model would have estimated richness really far back into the past, starting from `Year 1`, `Year 2`... `Year 1550` up until `2012`. This would make the magnitude of the estimates we get wrong - you can experiment to see what happens if we just add in `Year` - suddenly the slope of species change does in the hundreds!
 
 ```r
 plant_m_plot <- lmer(Richness ~ I(Year-2007) + (1|Site), data = toolik_plants)
@@ -344,17 +350,30 @@ summary(plant_m_plot3)
 __This final model answers our question about how plant species richness has changed over time, whilst also accounting for the hierarchical structure of the data. Let's visualise the results using the `sjPlot` package!__
 
 ```r
-# offset refers to the alignment of the labels
-# visualises random effects by default
-sjp.lmer(plant_m_plot3, y.offset = .4)
+# Set a clean theme for the graphs
+set_theme(base = theme_bw() + 
+            theme(panel.grid.major.x = element_blank(),
+                  panel.grid.minor.x = element_blank(),
+                  panel.grid.minor.y = element_blank(),
+                  panel.grid.major.y = element_blank(),
+                  plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), units = , "cm")))
 
-# To see the estimate for our fixed effect, Year
-sjp.lmer(plant_m_plot3, type = "fe", axis.lim = c(-2, 2))
+# Visualises random effects 
+(re.effects <- plot_model(plant_m_plot3, type = "re", show.values = TRUE))
+save_plot(filename = "model_re.png",
+          height = 11, width = 9)  # Save the graph if you wish
+
+# To see the estimate for our fixed effect (default), Year
+(fe.effects <- plot_model(plant_m_plot3, show.values = TRUE))
+save_plot(filename = "model_fe.png",
+          height = 11, width = 9)  # Save the graph if you wish
 ```
 
-<center> <img src="{{ site.baseurl }}/img/effects1.png" alt="Img" style="width: 500px;"/> <img src="{{ site.baseurl }}/img/effects3.png" alt="Img" style="width: 500px;"/></center>
+<center> <img src="{{ site.baseurl }}/img/model_re.png" alt="Img" style="width: 500px;"/> <img src="{{ site.baseurl }}/img/model_fe.png" alt="Img" style="width: 500px;"/></center>
 
-__For our second question, how does temperature influence species richness, we can design a similar model with one important difference - we will include `Year` as a random effect to account for temporal autocorrelation.__
+__The left plot with the random effect coefficients shows the *deviation* for each category in the __
+
+### For our second question, how does temperature influence species richness, we can design a similar model with one important difference - we will include `Year` as a random effect to account for temporal autocorrelation.__
 
 ```r
 plant_m_temp <- lmer(Richness ~ Mean.Temp + (1|Site/Block/Plot) + (1|Year),
@@ -365,23 +384,18 @@ summary(plant_m_temp)
 Let's see the model outputs again:
 
 ```
-# visualise the random effect terms
-sjp.lmer(plant_m_temp, y.offset = .4)
+# Visualise the random effect terms
+(temp.re.effects <- plot_model(plant_m_temp, type = "re", show.values = TRUE))
+save_plot(filename = "model_temp_re.png",
+          height = 11, width = 9)
 
-# visualise the fixed effect
-sjp.lmer(plant_m_temp, type = "fe")
+# Visualise the fixed effect
+(temp.fe.effects <- plot_model(plant_m_temp, show.values = TRUE))
+save_plot(filename = "model_temp_fe.png",
+          height = 11, width = 9)
 ```
 
-<center> <img src="{{ site.baseurl }}/img/effects2.png" alt="Img" style="width: 500px;"/> <img src="{{ site.baseurl }}/img/effects4.png" alt="Img" style="width: 500px;"/></center>
-
-To get a better idea of what the random slopes and intercepts are doing, we can visualise those as well using this code:
-
-```r
-sjp.lmer(plant_m_rs, type = "ri.slope")
-sjp.lmer(plant_m_rs, type = "rs.ri")
-```
-
-<center> <img src="{{ site.baseurl }}/img/random_intercepts.png" alt="Img" style="width: 500px;"/> <img src="{{ site.baseurl }}/img/random_slopes.png" alt="Img" style="width: 500px;"/></center>
+<center> <img src="{{ site.baseurl }}/img/model_temp_re.png" alt="Img" style="width: 500px;"/> <img src="{{ site.baseurl }}/img/model_temp_fe.png" alt="Img" style="width: 500px;"/></center>
 
 #### Assumptions made:
 
@@ -394,6 +408,8 @@ sjp.lmer(plant_m_rs, type = "rs.ri")
 
 1. We have not accounted for spatial autocorrelation in the data - whether more closely located plots are more likely to show similar responses than farther away plots.
 2. We have not accounted for temporal autocorrelation in the data - whether the influence of prior years of data are influencing the data in a given year.
+
+<a name="lme4b"></a>
 
 ## 9. Random slopes versus random intercepts `lme4`
 
@@ -424,13 +440,88 @@ summary(plant_m_rs)
 We can visualise the results:
 
 ```r
-sjp.lmer(plant_m_rs, y.offset = .4)
-sjp.lmer(plant_m_rs, type = "fe")
+(plant.re.effects <- plot_model(plant_m_rs, type = "re", show.values = TRUE))
+save_plot(filename = "model_plant_re.png",
+          height = 17, width = 15)
+
+(plant.fe.effects <- plot_model(plant_m_rs, show.values = TRUE))
+save_plot(filename = "model_plant_fe.png",
+          height = 14, width = 9)
 ```
 
-<center> <img src="{{ site.baseurl }}/img/effects5.png" alt="Img" style="width: 500px;"/> <img src="{{ site.baseurl }}/img/effects6.png" alt="Img" style="width: 500px;"/></center>
+<center> <img src="{{ site.baseurl }}/img/model_plant_re.png" alt="Img" style="width: 500px;"/> <img src="{{ site.baseurl }}/img/model_plant_fe.png" alt="Img" style="width: 500px;"/></center>
 
-#### <a href="#MCMCglmm"> 9. Hierarchical models using `MCMCglmm` </a>
+To get a better idea of what the random slopes and intercepts are doing, we can visualise your model predictions. We will use the `ggeffects` package to calculate model predictions and plot them. First, we calculate the overall predictions for the relationship between species richness and temperature. Then, we calculate the predictions for each plot, thus visualising the among-plot variation. Note that the second graph has both freely varying slopes and intercepts (i.e., they're different for each plot).
+
+```r
+ggpredict(plant_m_rs, terms = c("Mean.Temp")) %>% plot()
+save_plot(filename = "model_temp_richness.png",
+          height = 9, width = 9)
+
+ggpredict(plant_m_rs, terms = c("Mean.Temp", "Plot"), type = "re") %>% plot()
+save_plot(filename = "model_temp_richness_rs_ri.png",
+          height = 9, width = 9)
+```
+
+<center> <img src="{{ site.baseurl }}/img/model_temp_richness.png" alt="Img" style="width: 500px;"/> <img src="{{ site.baseurl }}/img/model_temp_richness_rs_ri.png" alt="Img" style="width: 500px;"/></center>
+
+#### An important note about honest graphs!
+
+Interestingly, the default options from the `ggpredict()` function set the scale differently for the y axes on the two plots. If you just see the first plot, at a first glance you'd think that species richness is increasing a lot as temperature increases! But take note of the y axis, it doesn't actually start at zero, thus the relationship is shown to be way stronger than it actually is.
+
+__We can manually plot the predictions to overcome this problem.__
+
+```r
+# Overall predictions - note that we have specified just mean temperature as a term
+predictions <- ggpredict(plant_m_rs, terms = c("Mean.Temp"))
+
+(pred_plot1 <- ggplot(predictions, aes(x, predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1) +
+  scale_y_continuous(limits = c(0, 22)) +
+  labs(x = "\nMean annual temperature", y = "Predicted species richness\n"))
+
+ggsave(pred_plot1, filename = "overall_predictions.png",
+       height = 5, width = 5)
+```
+
+__The relationship between temperature and species richness doesn't look that strong anymore! In fact, we see pretty small increases in species richness as temperature increases. What does that tell you about our hypothesis?__
+
+Now we can do the same, but this time taking into account the random effect.
+
+```r
+# Predictions for each grouping level (here plot which is a random effect)
+# re stands for random effect
+predictions_rs_ri <- ggpredict(plant_m_rs, terms = c("Mean.Temp", "Plot"), type = "re")
+
+(pred_plot2 <- ggplot(predictions_rs_ri, aes(x = x, y = predicted, colour = group)) +
+  stat_smooth(method = "lm", se = FALSE)  +
+  scale_y_continuous(limits = c(0, 22)) +
+  labs(x = "\nMean annual temperature", y = "Predicted species richness\n"))
+
+ggsave(pred_plot2, filename = "ri_rs_predictions.png",
+       height = 5, width = 5)
+
+```
+
+<center> <img src="{{ site.baseurl }}/img/overall_predictions.png" alt="Img" style="width: 500px;"/> <img src="{{ site.baseurl }}/img/ri_rs_predictions.png" alt="Img" style="width: 500px;"/></center>
+
+__Just for the sake of really seeing the random intercepts and random slopes, here is a zoomed in version) - but note that when preparing graphs for reports or publications, your axes should start at zero to properly visualise the magnitude of the shown relationship.__
+
+```r
+(pred_plot3 <- ggplot(predictions_rs_ri, aes(x = x, y = predicted, colour = group)) +
+    stat_smooth(method = "lm", se = FALSE)  +
+    labs(x = "\nMean annual temperature", y = "Predicted species richness\n"))
+
+ggsave(pred_plot3, filename = "ri_rs_predictions_zoom.png",
+       height = 5, width = 5)
+```
+
+<center> <img src="{{ site.baseurl }}/img/ri_rs_predictions_zoom.png" alt="Img" style="width: 500px;"/></center>
+
+<a name="MCMCglmm"></a>
+
+## 10. Hierarchical models using `MCMCglmm`
 
 __Let's take our `lme4` model and explore what that model structure looks like in `MCMCglmm`. `MCMCglmm` fits Generalised Linear Mixed-effects Models using a Markov chain Monte Carlo approach under a Bayesian statistical framework.__
 
@@ -440,7 +531,7 @@ For now, we can proceed knowing that just like in `lme4`, in `MCMCglmm` we can a
 
 __`MCMCglmm` models are also suitable when you are working with zero-inflated data - e.g., when you are modelling population abundance through time, often the data either have lots of zeros (meaning that you didn't see your target species) or they are skewed towards the left (there are more low numbers, like one skylark, two skylarks, than there are high numbers, 40 skylarks). If a model won't converge (i.e. you get error messages about convergence or the model outputs are very questionable), first of course revisit your question, your explanatory and response variables, fixed and random effects, and once you're sure all of those are sound, you can explore fitting the model using `MCMCglmm`. Because of the behind the scenes action (the thousands MCMC iterations that the model runs) and the statistics behind `MCMCglmm`, these types of models might be able to handle data that models using `lme4` can't.__
 
-__Let's explore how to answer our questions using models in `MCMCglmm`! We can gradually build a more complex model, starting with a `Site` random effect. Notice how we have transformed the `Year` column - `I(Year - 2007)` means that the year `2008` will become `Year 1` - then your model is estimating richness across the first, second, etc., year from your survey period. Otherwise, if we had kept the years just as `2008`, `2009`,..., the model would have estimated richness really far back into the past, starting from `Year 1`, `Year 2`... `Year 1550` up until `2012`. This would make the magnitude of the estimates we get wrong - you can experiment to see what happens if we just add in `Year` - suddenly the slope of species change does in the hundreds!__
+__Let's explore how to answer our questions using models in `MCMCglmm`! We can gradually build a more complex model, starting with a `Site` random effect.__
 
 ```r
 plant_mcmc <- MCMCglmm(Richness ~ I(Year - 2007), random = ~Site,
@@ -470,7 +561,7 @@ summary(plant_mcmc)
 
 The posterior mean (i.e., the slope) for the `Year` term is `-0.07` (remember that this is on the logarithmic scale, because we have used a Poisson distribution). So in general, based on this model, species richness has declined over time.
 
-__Now we should check if the model has converged - in `MCMCglmm` we assess that using trace plots - you want them to look like a fuzzy caterpillar. Ours really don't give off that fuzzy caterpillar vibe! So in this case, even though the model ran and we got our estimates, we wouldn't really trust this model - this model is not really the best model to answer our research question, because in in, we are not accounting for the site effects, or for the fact that the plots are within blocks within sites.__
+__Now we should check if the model has converged - in `MCMCglmm` we assess that using trace plots - you want them to look like a fuzzy caterpillar. `Sol` refers to the fixed effects and `VCV` to the random effects. Ours really don't give off that fuzzy caterpillar vibe! So in this case, even though the model ran and we got our estimates, we wouldn't really trust this model - this model is not really the best model to answer our research question, because in in, we are not accounting for the site effects, or for the fact that the plots are within blocks within sites.__
 
 ```r
 plot(plant_mcmc$VCV)
@@ -510,11 +601,11 @@ The trace plots for this model are a bit better than the privious one, and we ha
 We can use the package `MCMCvis` by <a href="https://github.com/caseyyoungflesh/MCMCvis" target="_blank">Casey Youngflesh</a> to plot the results of our _Betula nana_ model.
 
 ```r
-MCMCplot(treatment_mcmc$Sol)
-MCMCplot(treatment_mcmc$VCV)
+MCMCplot(betula_m$Sol)
+MCMCplot(betula_m$VCV)
 ```
 
-`Sol` refers to the fixed effects and `VCV` to the random effects, so we can see the effects sizes of the different variables we have added to our models. If the credible intervals overlap zero, then those effects are not significant. So we can see here that _Betula nana_ cover hasn't changed.
+`Sol` refers to the fixed effects and `VCV` to the random effects, so we can see the effects sizes of the different variables we have added to our models. If the credible intervals overlap zero, then those effects are not significant. So we can see here that _Betula nana_ cover hasn't changed. `units` refers to the residual variance.
 
 <center> <img src="{{ site.baseurl }}/img/mcmc_vis1.png" alt="Img" style="width: 400px;"/>  <img src="{{ site.baseurl }}/img/mcmc_vis2.png" alt="Img" style="width: 500px;"/></center>
 
@@ -524,7 +615,9 @@ So, today we have learned that in order to design a statistical model we first n
 
 #### Extras
 
-If you are keen, you can now try out the `brms` package and generate the Stan code for this model.  This will help us to start to thing about how we can implement hierarchical models using the statistical programming language Stan, which we will cover in a future workshop.
+If you are keen, you can now try out the `brms` package and generate the Stan code for this model.  This will help us to start to thing about how we can implement hierarchical models using the statistical programming language Stan.
+
+__You can check out <a href="https://ourcodingclub.github.io/2018/04/30/stan-2.html" arget="_blank">the Stan hierarchical modelling tutorial here!</a>__
 
 <p></p>
 
